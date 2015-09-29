@@ -1,5 +1,8 @@
-
-(ns caffeine.core)
+(ns caffeine.core
+  (:require [clojure.core.async
+             :as a
+             :refer [>! <! >!! <!! go chan buffer close! thread
+                     alts! alts!! timeout]]))
 
 (defn froth-milk
   [milk]
@@ -35,10 +38,14 @@
   (let [milk-input "Cold Milk"
         beans-input "Coffee Beans"
         water-input "Cold Water"
-        output
-        (combine
-         (pour-water
-          (grind-coffee beans-input)
-          (heat-water water-input))
-         (froth-milk milk-input))]
-    (println output)))
+        ch1 (chan)
+        ch2 (chan)
+        ch3 (chan)
+        ch4 (chan)
+        ch5 (chan)]
+    (go (>! ch1 (froth-milk milk-input)))
+    (go (>! ch2 (heat-water water-input)))
+    (go (>! ch3 (grind-coffee beans-input)))
+    (go (>! ch4 (pour-water (<! ch3) (<! ch2))))
+    (go (>! ch5 (combine (<! ch1) (<! ch4))))
+    (println (<!! ch5))))
